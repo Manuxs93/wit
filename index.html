@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>HeyForm</title>
+  <link href="https://cdnjs.cloudflare.com" rel="dns-prefetch" />
+  <link href="https://js.stripe.com" rel="dns-prefetch" />
+  {{#if heyform.enableGoogleFonts}}
+  <link href="https://fonts.gstatic.com" rel="dns-prefetch" />
+  {{/if}}
+  <meta content="width=device-width, initial-scale=1" name="viewport" />
+  <meta content="HeyForm" name="application-name" />
+  <meta content="yes" name="mobile-web-app-capable" />
+  <meta content="yes" name="apple-mobile-web-app-capable" />
+  <meta content="white" name="apple-mobile-web-app-status-bar-style" />
+  <meta content="#fff" name="theme-color" />
+  <meta content="HeyForm" name="apple-mobile-web-app-title" />
+  <meta content="telephone=no,email=no" name="format-detection" />
+  <meta content="on" http-equiv="x-dns-prefetch-control" />
+  <link href="/static/favicon.ico" rel="shortcut icon" />
+  <link href="/static/favicon.svg" rel="mask-icon" />
+  <link href="/static/apple-touch-icon.png" rel="apple-touch-icon" sizes="180x180" />
+  <link href="/static/initial.css" rel="stylesheet" />
+  <link href="/static/manifest.webmanifest" rel="manifest" />
+  <link defer href="https://cdnjs.cloudflare.com/ajax/libs/flag-icon-css/4.1.5/css/flag-icons.min.css" rel="stylesheet" />
+
+  <script>
+		;(function () {
+			const userAgent = window.navigator.userAgent;
+			const heyform = {{{json heyform}}};
+
+			heyform.device = {
+				ios: /iPad|iPhone|iPod/i.test(userAgent),
+				android: /Android/i.test(userAgent),
+				mobile: /Android|iPad|iPhone|iPod/i.test(userAgent),
+				windowHeight: window.innerHeight,
+				screenHeight: window.screen.height,
+        locale: '{{locale}}'
+			};
+
+			window.heyform = heyform;
+		})();
+	</script>
+  <script type="module" crossorigin src="/static/index-CRTeBK4_.js"></script>
+  <link rel="modulepreload" crossorigin href="/static/vendor-BiGkYQmw.js">
+  <link rel="modulepreload" crossorigin href="/static/ui-Bydwk6qo.js">
+  <link rel="modulepreload" crossorigin href="/static/heyform-CfdgzL3d.js">
+  <link rel="stylesheet" crossorigin href="/static/index-CA9yP2H_.css">
+
+  <!-- Iubenda Cookie Solution -->
+  <script type="text/javascript" src="https://embeds.iubenda.com/widgets/badbf8ce-b82e-421b-8467-1a132a313b76.js"></script>
+</head>
+<body>
+<div id="root"></div>
+<div id="loading">
+  <svg class="loading-icon" fill="none" style="width:1.25rem; height:1.25rem;" viewBox="0 0 24 24"
+       xmlns="http://www.w3.org/2000/svg">
+    <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+    <path
+      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+      fill="currentColor"></path>
+  </svg>
+</div>
+
+<script>
+(function () {
+  /*
+   * HeyForm Auto-Advance Script
+   * Avanza automaticamente alla slide successiva quando l'utente seleziona
+   * una risposta in un blocco a scelta singola.
+   *
+   * NON avanza per:
+   *  - multiple_choice con allowMultiple=true (più selezioni possibili)
+   *  - campi testo (short_text, long_text, email, phone, number, date, url)
+   *
+   * Logica:
+   *  - Intercetta click su .heyform-radio-container
+   *  - Conta i .heyform-radio-selected nel blocco PRIMA del click
+   *  - Se pre-count >= 1: un secondo elemento è stato selezionato => multiple => skip
+   *  - Se pre-count == 0: prima selezione => aspetta 600ms => se ancora 1 solo selezionato => avanza
+   */
+
+  var ADVANCE_DELAY = 600;  // ms prima di cliccare Next
+  var pendingTimer = null;
+
+  function getActiveBlock() {
+    // Il blocco attivo non ha la classe heyform-block-inactive
+    var blocks = document.querySelectorAll('.heyform-block');
+    for (var i = 0; i < blocks.length; i++) {
+      if (!blocks[i].classList.contains('heyform-block-inactive') &&
+          !blocks[i].classList.contains('heyform-block-leaving') &&
+          !blocks[i].classList.contains('heyform-block-leaving-active') &&
+          !blocks[i].classList.contains('heyform-block-entering')) {
+        return blocks[i];
+      }
+    }
+    return null;
+  }
+
+  function countSelected(block) {
+    return block.querySelectorAll('.heyform-radio.heyform-radio-selected').length;
+  }
+
+  function clickNextButton(block) {
+    // IMPORTANTE: va premuto il pulsante di conferma della slide (OK / Avanti),
+    // che valida e SALVA la risposta. NON la freccia di navigazione
+    // (button.heyform-pagination-next): quella cambia slide senza salvare
+    // la risposta e all'invio finale il form torna alla prima domanda.
+    var btn = block.querySelector('button.heyform-submit-button');
+    if (btn && !btn.disabled) {
+      btn.click();
+    }
+  }
+
+  function isTextInputBlock(block) {
+    // I blocchi di testo non hanno .heyform-radio-group
+    // Verifica se il blocco è di tipo testo puro
+    var radioGroup = block.querySelector('.heyform-radio-group');
+    return !radioGroup;
+  }
+
+  function handleChoiceClick(e) {
+    var container = e.target;
+
+    // Risali fino a trovare .heyform-radio-container
+    while (container && !container.classList.contains('heyform-radio-container')) {
+      container = container.parentElement;
+    }
+    if (!container) return;
+
+    // Risali fino al blocco attivo
+    var block = container;
+    while (block && !block.classList.contains('heyform-block')) {
+      block = block.parentElement;
+    }
+    if (!block) return;
+
+    // Se è un blocco testo (no radio-group) non fare nulla
+    if (isTextInputBlock(block)) return;
+
+    // Conta le selezioni PRIMA di questo click
+    var preCount = countSelected(block);
+
+    // Cancella eventuali timer pendenti
+    if (pendingTimer) {
+      clearTimeout(pendingTimer);
+      pendingTimer = null;
+    }
+
+    // Se c'era già almeno 1 selezione e ne sta aggiungendo un'altra => allowMultiple => skip
+    if (preCount >= 1) {
+      // Potrebbe anche stare deselezionando (toggle) in allowMultiple,
+      // in ogni caso non auto-avanziamo
+      return;
+    }
+
+    // Prima selezione: aspetta e poi controlla
+    pendingTimer = setTimeout(function () {
+      pendingTimer = null;
+      var postCount = countSelected(block);
+
+      // Se è ancora 1 sola selezione => è singola => avanza
+      if (postCount === 1) {
+        // Verifica che il blocco sia ancora attivo
+        if (!block.classList.contains('heyform-block-inactive') &&
+            !block.classList.contains('heyform-block-leaving') &&
+            !block.classList.contains('heyform-block-leaving-active')) {
+          clickNextButton(block);
+        }
+      }
+      // Se 0 (deselezionato) o 2+ (multiple) => non fare nulla
+    }, ADVANCE_DELAY);
+  }
+
+  // Usa event delegation sul document per catturare i click
+  // useCapture=true per intercettare prima che React gestisca l'evento
+  document.addEventListener('click', handleChoiceClick, true);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Panel — WitPeople Forms</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0f172a; --surface: #1e293b; --surface2: #263349;
+      --border: #334155; --text: #f1f5f9; --muted: #64748b;
+      --accent: #6366f1; --accent2: #8b5cf6; --success: #22c55e; --danger: #ef4444;
+    }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+    .sidebar { position: fixed; top: 0; left: 0; width: 240px; height: 100vh; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; z-index: 100; }
+    .sidebar-logo { padding: 24px 20px 20px; border-bottom: 1px solid var(--border); }
+    .logo-row { display: flex; align-items: center; gap: 12px; }
+    .logo-icon { width: 36px; height: 36px; background: linear-gradient(135deg, var(--accent), var(--accent2)); border-radius: 10px; display: flex; align-items: center; justify-content: center; }
+    .logo-icon svg { width: 18px; height: 18px; stroke: #fff; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .logo-text h2 { font-size: 15px; font-weight: 700; }
+    .logo-text p { font-size: 11px; color: var(--muted); margin-top: 1px; }
+    .sidebar-nav { padding: 16px 12px; flex: 1; }
+    .nav-section { font-size: 10px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); padding: 0 8px; margin-bottom: 8px; margin-top: 16px; }
+    .nav-section:first-child { margin-top: 0; }
+    .nav-link { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 8px; color: var(--muted); text-decoration: none; font-size: 14px; transition: all .15s; margin-bottom: 2px; }
+    .nav-link:hover, .nav-link.active { background: var(--surface2); color: var(--text); }
+    .nav-link.active { color: var(--accent); }
+    .nav-link svg { width: 16px; height: 16px; }
+    .sidebar-footer { padding: 16px 12px; border-top: 1px solid var(--border); }
+    .logout-btn { display: flex; align-items: center; gap: 10px; width: 100%; padding: 9px 10px; border-radius: 8px; color: var(--danger); background: none; border: none; font-size: 14px; cursor: pointer; text-decoration: none; transition: background .15s; }
+    .logout-btn:hover { background: rgba(239,68,68,.1); }
+    .logout-btn svg { width: 16px; height: 16px; }
+    .main { margin-left: 240px; min-height: 100vh; display: flex; flex-direction: column; }
+    .topbar { background: var(--surface); border-bottom: 1px solid var(--border); padding: 16px 32px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 50; }
+    .topbar-title { font-size: 18px; font-weight: 600; }
+    .topbar-meta { font-size: 13px; color: var(--muted); }
+    .badge { display: inline-flex; align-items: center; padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 500; }
+    .badge-success { background: rgba(34,197,94,.15); color: #4ade80; }
+    .badge-muted { background: rgba(100,116,139,.2); color: var(--muted); }
+    .content { padding: 32px; flex: 1; }
+    .stats-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; margin-bottom: 32px; }
+    .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px 24px; }
+    .stat-label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 8px; }
+    .stat-value { font-size: 28px; font-weight: 700; }
+    .stat-sub { font-size: 12px; color: var(--muted); margin-top: 4px; }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+    .card-header { padding: 18px 24px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+    .card-header h3 { font-size: 15px; font-weight: 600; }
+    .card-header p { font-size: 13px; color: var(--muted); }
+    .search-box { display: flex; align-items: center; gap: 8px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; }
+    .search-box svg { width: 14px; height: 14px; color: var(--muted); }
+    .search-box input { background: none; border: none; outline: none; color: var(--text); font-size: 13px; width: 180px; }
+    .search-box input::placeholder { color: var(--muted); }
+    table { width: 100%; border-collapse: collapse; }
+    thead th { padding: 11px 16px; text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); background: rgba(15,23,42,.5); border-bottom: 1px solid var(--border); white-space: nowrap; }
+    tbody tr { border-bottom: 1px solid var(--border); transition: background .1s; }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: rgba(99,102,241,.04); }
+    td { padding: 12px 16px; font-size: 13px; vertical-align: middle; }
+    .form-name { font-weight: 500; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .form-id { font-size: 11px; color: var(--muted); font-family: monospace; margin-top: 2px; }
+    .form-date { font-size: 12px; color: var(--muted); white-space: nowrap; }
+    .field-cell { display: flex; align-items: center; gap: 6px; }
+    .dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+    .dot-on  { background: var(--success); box-shadow: 0 0 5px rgba(34,197,94,.5); }
+    .dot-off { background: var(--border); }
+    .field-input { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-size: 12px; font-family: monospace; padding: 6px 9px; outline: none; transition: border-color .2s; }
+    .field-input:focus { border-color: var(--accent); }
+    .field-input::placeholder { color: var(--muted); font-family: monospace; }
+    .field-input.wide { width: 220px; }
+    .field-input.narrow { width: 155px; }
+    .btn { padding: 6px 12px; border: none; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; transition: all .15s; white-space: nowrap; }
+    .btn-save { background: var(--accent); color: #fff; }
+    .btn-save:hover { background: #4f46e5; }
+    .btn-save:disabled { opacity: .5; cursor: default; }
+    .btn-save.saved { background: #16a34a; }
+    .btn-test { background: rgba(99,102,241,.15); color: #818cf8; border: 1px solid rgba(99,102,241,.3); }
+    .btn-test:hover { background: rgba(99,102,241,.25); }
+    .form-link { color: var(--muted); text-decoration: none; font-size: 12px; }
+    .form-link:hover { color: var(--text); }
+    .empty-state { padding: 50px 20px; text-align: center; color: var(--muted); }
+    #toast { position: fixed; bottom: 24px; right: 24px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px 18px; font-size: 14px; box-shadow: 0 8px 24px rgba(0,0,0,.4); transform: translateY(80px); opacity: 0; transition: all .3s cubic-bezier(.34,1.56,.64,1); z-index: 9999; min-width: 220px; }
+    #toast.show { transform: translateY(0); opacity: 1; }
+    #toast.tok  { border-color: rgba(34,197,94,.4); color: #4ade80; }
+    #toast.terr { border-color: rgba(239,68,68,.4); color: #f87171; }
+    .alert { padding: 12px 16px; border-radius: 8px; font-size: 13px; margin-bottom: 24px; }
+    .alert-err { background: rgba(239,68,68,.12); border: 1px solid rgba(239,68,68,.3); color: #f87171; }
+    /* modal test */
+    .modal-bg { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.6); z-index: 200; align-items: center; justify-content: center; }
+    .modal-bg.open { display: flex; }
+    .modal { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 28px; max-width: 640px; width: 100%; max-height: 80vh; overflow-y: auto; }
+    .modal h3 { font-size: 16px; font-weight: 700; margin-bottom: 16px; }
+    .modal pre { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 14px; font-size: 12px; color: #94a3b8; overflow-x: auto; white-space: pre-wrap; word-break: break-all; }
+    .modal-close { float: right; background: none; border: none; color: var(--muted); font-size: 20px; cursor: pointer; line-height: 1; }
+    .modal-close:hover { color: var(--text); }
+    .wh-status { font-size: 11px; padding: 2px 7px; border-radius: 4px; margin-left: 6px; }
+    .wh-ok  { background: rgba(34,197,94,.15); color: #4ade80; }
+    .wh-err { background: rgba(239,68,68,.15); color: #f87171; }
+  </style>
+</head>
+<body>
+
+<nav class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-row">
+      <div class="logo-icon">
+        <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+      </div>
+      <div class="logo-text"><h2>WitPeople</h2><p>Forms Admin</p></div>
+    </div>
+  </div>
+  <div class="sidebar-nav">
+    <div class="nav-section">Gestione</div>
+    <a href="/admin" class="nav-link active">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+      Dashboard
+    </a>
+    <div class="nav-section">Integrazioni</div>
+    <a href="/admin" class="nav-link">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+      Meta Pixel &amp; Webhook
+    </a>
+  </div>
+  <div class="sidebar-footer">
+    <a href="/admin/logout" class="logout-btn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+      Esci
+    </a>
+  </div>
+</nav>
+
+<div class="main">
+  <div class="topbar">
+    <div>
+      <div class="topbar-title">Dashboard</div>
+      <div class="topbar-meta">Gestione form, Meta Pixel e Webhook GHL</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px;">
+      <span class="badge badge-success">&#9679; Sistema attivo</span>
+      <span class="topbar-meta" id="clock"></span>
+    </div>
+  </div>
+
+  <div class="content">
+    <div id="errBanner" class="alert alert-err" style="display:none"></div>
+
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-label">Form totali</div>
+        <div class="stat-value" id="sTot">&#8212;</div>
+        <div class="stat-sub">Nel database</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Pixel configurati</div>
+        <div class="stat-value" id="sPix" style="color:#818cf8">&#8212;</div>
+        <div class="stat-sub">Form con Meta Pixel</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Webhook GHL</div>
+        <div class="stat-value" id="sWh" style="color:#4ade80">&#8212;</div>
+        <div class="stat-sub">Form con webhook attivo</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <h3>Form — Pixel &amp; Webhook GHL</h3>
+          <p>Configura Meta Pixel ID e URL webhook GoHighLevel per ogni form</p>
+        </div>
+        <div class="search-box">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          <input type="text" id="srch" placeholder="Cerca form..." oninput="filterForms()">
+        </div>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Form</th>
+            <th>Stato</th>
+            <th>Meta Pixel ID</th>
+            <th>Webhook GHL URL</th>
+            <th>Azioni</th>
+          </tr>
+        </thead>
+        <tbody id="tbody">
+          <tr><td colspan="5" class="empty-state">Caricamento...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Endpoint info box -->
+    <div style="margin-top:24px; background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:20px 24px;">
+      <div style="font-size:13px; font-weight:600; margin-bottom:10px;">&#128279; Endpoint webhook HeyForm</div>
+      <div style="font-size:12px; color:var(--muted); margin-bottom:8px;">Incolla questo URL nelle impostazioni webhook di ogni form HeyForm:</div>
+      <code style="display:block; background:var(--bg); border:1px solid var(--border); border-radius:6px; padding:10px 14px; font-size:13px; color:#a5b4fc;" id="webhookEndpoint"></code>
+      <div style="font-size:11px; color:var(--muted); margin-top:8px;">Il transformer riconosce automaticamente il formId dal payload e applica il webhook GHL corretto.</div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal test risultato -->
+<div class="modal-bg" id="modalBg" onclick="closeModal(event)">
+  <div class="modal">
+    <button class="modal-close" onclick="document.getElementById('modalBg').classList.remove('open')">&#10005;</button>
+    <h3>Test Transformer <span id="modalStatus"></span></h3>
+    <pre id="modalPre"></pre>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+var ORIGIN = window.location.origin;
+document.getElementById('webhookEndpoint').textContent = ORIGIN + '/webhook/transform';
+
+function toast(msg, ok) {
+  var t = document.getElementById('toast');
+  t.textContent = (ok ? '\u2713 ' : '\u2717 ') + msg;
+  t.className = 'show ' + (ok ? 'tok' : 'terr');
+  setTimeout(function() { t.className = ''; }, 3000);
+}
+
+function fmtDate(ts) {
+  if (!ts) return '\u2014';
+  try { return new Date(ts).toLocaleDateString('it-IT', {day:'2-digit',month:'short',year:'numeric'}); }
+  catch(e) { return '\u2014'; }
+}
+
+var allForms = [];
+
+function filterForms() {
+  var q = document.getElementById('srch').value.toLowerCase();
+  var rows = document.querySelectorAll('#tbody tr[data-id]');
+  for (var i = 0; i < rows.length; i++) {
+    var n = rows[i].getAttribute('data-name') || '';
+    rows[i].style.display = n.includes(q) ? '' : 'none';
+  }
+}
+
+function saveForm(formId, btn) {
+  var pixelId    = document.getElementById('px-' + formId).value.trim();
+  var webhookUrl = document.getElementById('wh-' + formId).value.trim();
+  btn.disabled = true;
+  btn.textContent = '...';
+  fetch('/admin/api/form-settings', {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ formId: formId, pixelId: pixelId, webhookUrl: webhookUrl })
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(d) {
+    if (d.success) {
+      btn.classList.add('saved');
+      btn.textContent = '\u2713 Salvato';
+      // aggiorna i dot
+      var pxDot = document.getElementById('pxdot-' + formId);
+      var whDot = document.getElementById('whdot-' + formId);
+      if (pxDot) pxDot.className = 'dot ' + (pixelId ? 'dot-on' : 'dot-off');
+      if (whDot) whDot.className = 'dot ' + (webhookUrl ? 'dot-on' : 'dot-off');
+      toast('Impostazioni salvate', true);
+      setTimeout(function() { btn.classList.remove('saved'); btn.textContent = 'Salva'; btn.disabled = false; }, 2500);
+    } else {
+      throw new Error(d.error || 'Errore');
+    }
+  })
+  .catch(function(e) {
+    btn.textContent = 'Salva'; btn.disabled = false;
+    toast('Errore: ' + e.message, false);
+  });
+}
+
+function testTransform(formId) {
+  // Invia il payload di esempio al /webhook/test per vedere come viene trasformato
+  var samplePayload = {
+    id: 'test-submission-001',
+    formId: formId,
+    formName: 'Test Form',
+    fields: [],
+    answers: [],
+    hiddenFields: [],
+    variables: []
+  };
+  fetch('/webhook/test', {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(samplePayload)
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(d) {
+    document.getElementById('modalStatus').innerHTML = '<span class="wh-status wh-ok">OK</span>';
+    document.getElementById('modalPre').textContent = JSON.stringify(d.transformed, null, 2);
+    document.getElementById('modalBg').classList.add('open');
+  })
+  .catch(function(e) {
+    document.getElementById('modalStatus').innerHTML = '<span class="wh-status wh-err">ERRORE</span>';
+    document.getElementById('modalPre').textContent = e.message;
+    document.getElementById('modalBg').classList.add('open');
+  });
+}
+
+function closeModal(e) {
+  if (e.target === document.getElementById('modalBg')) {
+    document.getElementById('modalBg').classList.remove('open');
+  }
+}
+
+function loadForms() {
+  fetch('/admin/api/forms', { credentials: 'include' })
+  .then(function(r) {
+    if (r.status === 401 || r.redirected) { window.location.href = '/admin/login'; return null; }
+    return r.json();
+  })
+  .then(function(d) {
+    if (!d) return;
+    allForms = d.forms || [];
+    document.getElementById('sTot').textContent = allForms.length;
+    document.getElementById('sPix').textContent = allForms.filter(function(f) { return f.pixelId; }).length;
+    document.getElementById('sWh').textContent  = allForms.filter(function(f) { return f.webhookUrl; }).length;
+
+    var tbody = document.getElementById('tbody');
+    if (allForms.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="5" class="empty-state">Nessun form trovato</td></tr>';
+      return;
+    }
+
+    var html = '';
+    for (var i = 0; i < allForms.length; i++) {
+      var f = allForms[i];
+      var name = (f.name || 'Form senza nome').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      var badge = f.active
+        ? '<span class="badge badge-success">Attivo</span>'
+        : '<span class="badge badge-muted">Bozza</span>';
+
+      html += '<tr data-id="' + f.id + '" data-name="' + name.toLowerCase() + '">';
+
+      // Form info
+      html += '<td>';
+      html += '<div class="form-name" title="' + name + '">' + name + '</div>';
+      html += '<div class="form-id">' + f.id + '</div>';
+      html += '<div class="form-date">' + fmtDate(f.createdAt) + '</div>';
+      html += '</td>';
+
+      // Stato
+      html += '<td>' + badge + '</td>';
+
+      // Pixel ID
+      html += '<td><div class="field-cell">';
+      html += '<span class="dot ' + (f.pixelId ? 'dot-on' : 'dot-off') + '" id="pxdot-' + f.id + '" title="' + (f.pixelId ? 'Pixel attivo' : 'Non configurato') + '"></span>';
+      html += '<input class="field-input narrow" id="px-' + f.id + '" type="text" value="' + (f.pixelId || '') + '" placeholder="ID Pixel Meta">';
+      html += '</div></td>';
+
+      // Webhook GHL
+      html += '<td><div class="field-cell">';
+      html += '<span class="dot ' + (f.webhookUrl ? 'dot-on' : 'dot-off') + '" id="whdot-' + f.id + '" title="' + (f.webhookUrl ? 'Webhook attivo' : 'Non configurato') + '"></span>';
+      html += '<input class="field-input wide" id="wh-' + f.id + '" type="url" value="' + (f.webhookUrl || '') + '" placeholder="https://services.leadconnectorhq.com/hooks/...">';
+      html += '</div></td>';
+
+      // Azioni
+      html += '<td><div style="display:flex;gap:6px;align-items:center;">';
+      html += '<button class="btn btn-save" onclick="saveForm(\'' + f.id + '\', this)">Salva</button>';
+      html += '<a href="/form/' + f.id + '" target="_blank" class="form-link" title="Apri form">&#8599;</a>';
+      html += '</div></td>';
+
+      html += '</tr>';
+    }
+    tbody.innerHTML = html;
+  })
+  .catch(function(e) {
+    document.getElementById('errBanner').style.display = '';
+    document.getElementById('errBanner').textContent = 'Errore caricamento: ' + e.message;
+    document.getElementById('tbody').innerHTML = '<tr><td colspan="5" class="empty-state">Errore nel caricamento dati</td></tr>';
+  });
+}
+
+setInterval(function() {
+  var el = document.getElementById('clock');
+  if (el) el.textContent = new Date().toLocaleTimeString('it-IT');
+}, 1000);
+
+loadForms();
+</script>
+</body>
+</html>
