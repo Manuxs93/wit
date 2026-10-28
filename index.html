@@ -177,5 +177,68 @@
   document.addEventListener('click', handleChoiceClick, true);
 })();
 </script>
+<script>
+(function () {
+  /* Meta Pixel: legge il Pixel ID salvato dal pannello admin per questo form */
+  var m = window.location.pathname.match(/\/form\/([A-Za-z0-9]+)/);
+  if (!m) return;
+  fetch('/webhook/pixel/' + m[1], { credentials: 'omit' })
+    .then(function (r) { return r.json(); })
+    .then(function (d) {
+      if (!d || !d.pixelId || window.fbq) return;
+      !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.type='text/plain';t.className='_iub_cs_activate';t.setAttribute('data-suppressedsrc',v);t.setAttribute('data-iub-purposes','5');s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');
+      /* evita il caricamento dello script secondario signals/config (bloccato da Iubenda) */
+      window.fbq('set', 'autoConfig', false, d.pixelId);
+      window.fbq('init', d.pixelId);
+      window.fbq('track', 'PageView');
+    })
+    .catch(function () {});
+})();
+</script>
+<script>
+(function () {
+  /* Meta Pixel: evento Lead a invio completato con successo (mutation completeSubmission).
+     HeyForm (Apollo) invia via XMLHttpRequest; hook anche su fetch per sicurezza. */
+  if (window.__witLeadHook) return;
+  window.__witLeadHook = true;
+  function isOk(txt) {
+    try {
+      var j = JSON.parse(txt);
+      return !!(j && j.data && j.data.completeSubmission && !(j.errors && j.errors.length));
+    } catch (e) { return false; }
+  }
+  function fireLead() {
+    if (window.__witLeadSent) return;
+    window.__witLeadSent = true;
+    if (typeof window.fbq === 'function') { window.fbq('track', 'Lead'); }
+  }
+  /* XMLHttpRequest */
+  var xSend = XMLHttpRequest.prototype.send;
+  XMLHttpRequest.prototype.send = function (body) {
+    try {
+      if (typeof body === 'string' && body.indexOf('completeSubmission') !== -1) {
+        this.addEventListener('load', function () {
+          try { if (this.status >= 200 && this.status < 300 && isOk(this.responseText)) fireLead(); } catch (e) {}
+        });
+      }
+    } catch (e) {}
+    return xSend.apply(this, arguments);
+  };
+  /* fetch */
+  if (window.fetch) {
+    var origFetch = window.fetch;
+    window.fetch = function (input, init) {
+      var p = origFetch.apply(this, arguments);
+      try {
+        var body = init && typeof init.body === 'string' ? init.body : '';
+        if (body.indexOf('completeSubmission') !== -1) {
+          p.then(function (res) { return res.clone().text().then(function (t) { if (isOk(t)) fireLead(); }); }).catch(function () {});
+        }
+      } catch (e) {}
+      return p;
+    };
+  }
+})();
+</script>
 </body>
 </html>

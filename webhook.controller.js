@@ -375,6 +375,30 @@ let WebhookController = class WebhookController {
             return res.status(500).json({ error: e.message });
         }
     }
+
+    /**
+     * GET /webhook/pixel/:formId
+     * Restituisce SOLO il Pixel ID del form (dato pubblico per natura:
+     * finisce comunque nel browser). Usato dallo script in index.html
+     * per caricare il Meta Pixel. Il valore e' validato (solo cifre).
+     */
+    async pixel(req, res) {
+        try {
+            const formId = String((req.params && req.params.formId) || '');
+            let pixelId = null;
+            if (/^[A-Za-z0-9]{4,32}$/.test(formId)) {
+                const form = await getFormSettings(formId);
+                const raw = form && form.settings && form.settings.pixelId
+                    ? String(form.settings.pixelId).trim()
+                    : '';
+                if (/^\d{5,20}$/.test(raw)) pixelId = raw;
+            }
+            res.set('Cache-Control', 'public, max-age=60');
+            return res.json({ pixelId: pixelId });
+        } catch (e) {
+            return res.json({ pixelId: null });
+        }
+    }
 };
 
 exports.WebhookController = WebhookController;
@@ -396,6 +420,15 @@ __decorate([
     __metadata("design:paramtypes", [Object, Object]),
     __metadata("design:returntype", Promise)
 ], WebhookController.prototype, "test", null);
+
+__decorate([
+    (0, common_1.Get)('/webhook/pixel/:formId'),
+    __param(0, (0, common_1.Req)()),
+    __param(1, (0, common_1.Res)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Object]),
+    __metadata("design:returntype", Promise)
+], WebhookController.prototype, "pixel", null);
 
 exports.WebhookController = WebhookController = __decorate([
     (0, common_1.Controller)()
